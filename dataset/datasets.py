@@ -5,7 +5,7 @@ from torch.utils.data import ConcatDataset
 from .aug import load_transforms, ContrastiveLearningViewGenerator
 
 
-def load_dataset(data_name, transform_name=None, use_baseline=False, train=True, into_patches=False, path="./data/"):
+def load_dataset(data_name, transform_name=None, use_baseline=False, train=True, into_patches=False, add_gaussian = True, num_patch = 4, path="./data/"):
     """Loads a dataset for training and testing. If augmentloader is used, transform should be None.
     
     Parameters:
@@ -23,7 +23,7 @@ def load_dataset(data_name, transform_name=None, use_baseline=False, train=True,
     aug_transform, baseline_transform = load_transforms(transform_name)
     transform = baseline_transform if use_baseline else aug_transform 
     if into_patches:
-        transform = ContrastiveLearningViewGenerator(transform)
+        transform = ContrastiveLearningViewGenerator(transform, add_gaussian = add_gaussian, num_patch = num_patch)
         
     _name = data_name.lower()
     if _name == "cifar10":

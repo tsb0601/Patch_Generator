@@ -28,6 +28,7 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+        
 
 
 class GBlock_start(nn.Module):
@@ -254,7 +255,7 @@ class GeneratorCIFAR(dcgan_base.DCGANBaseGenerator):
             
         )
         self.end = nn.Sequential(
-            nn.ConvTranspose2d(ngf * 4, 3, 3, 1, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 4, 3, 4, 2, 2, bias=False),
             nn.Tanh()
         )
 
@@ -316,6 +317,8 @@ class encoder(nn.Module):
         else:
             return self.projection(self.drop(self.pre_feature(feature)))
 
+        
+
 
 class autoencoder(dcgan_base.DCGANBaseDiscriminator):
 
@@ -324,11 +327,32 @@ class autoencoder(dcgan_base.DCGANBaseDiscriminator):
         #self.encoder = DiscriminatorCIFAR(nz=latent_dim, iden=iden, shortcut=True)
         self.encoder = encoder(z_dim = nz)
         self.decoder = GeneratorCIFAR(nz=nz, iden=iden)
+        
+        self.fc_mu = nn.Linear(latent_dim, nz)
+        self.fc_var = nn.Linear(latent_dim, nz)
 
-
+    
+    
+    def reparameterize(self, mu, logvar):
+        """
+        Reparameterization trick to sample from N(mu, var) from
+        N(0,1).
+        :param mu: (Tensor) Mean of the latent Gaussian [B x D]
+        :param logvar: (Tensor) Standard deviation of the latent Gaussian [B x D]
+        :return: (Tensor) [B x D]
+        """
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
 
     def forward(self, x):
         z, z_proj = self.encoder(x)
+        
+        mu = self.fc_mu(z)
+        log_var = self.fc_var(z)
+        
+        z_proj = self.reparameterize(mu, log_var)
+        
         x_recon = self.decoder(z_proj)
 
-        return z_proj, x_recon
+        return z_proj, x_recon, mu, log_var

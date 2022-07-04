@@ -133,7 +133,21 @@ class Solarization:
         """
 
         return ImageOps.solarize(img)
+
+
+class AddGaussianNoise(object):
+    def __init__(self, mean=0., std=1.):
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
     
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+        
+        
+  
 class Brightness_Jitter(object):
     def __init__(self, jitter_range=0.4):
         self.jitter_range = jitter_range
@@ -144,10 +158,18 @@ class Brightness_Jitter(object):
         return (img*jitter_ratio)
 
 class ContrastiveLearningViewGenerator(object):
-    def __init__(self,aug_transform):
+    def __init__(self,aug_transform, add_gaussian, num_patch = 4):
         self.aug_transform = aug_transform
         
+        self.num_patch = num_patch
+        self.add_gaussian = add_gaussian
+      
     def __call__(self, x):
+    
+        add_gaussian = self.add_gaussian
+        
+
+        
     
         normalize = transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])
         aug_transform = transforms.Compose([
@@ -156,13 +178,33 @@ class ContrastiveLearningViewGenerator(object):
             transforms.ToTensor(),
             normalize
         ])
+        
+        """
+        baseline_transform = transforms.Compose([
+            #transforms.RandomResizedCrop(14,scale=(0.4375, 0.4375), ratio=(1,1)),
+            transforms.RandomCrop(14),
+            
+            transforms.ToTensor()])
+            
+        """ 
         baseline_transform = transforms.Compose([
             transforms.ToTensor()])
+            
+        gaussian_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
+            transforms.ToTensor(),
+            AddGaussianNoise(0., 0.08),
+            normalize
+        ])
             
         x_tensor = baseline_transform(x)
         #print(x_tensor.shape)    
         
-        patched_images = (x_tensor.unfold(1, 8, 8).unfold(2, 8, 8)).permute(1,2,0,3,4).reshape(16, 3, 8, 8) 
+        patched_images = (x_tensor.unfold(1, 14, 5).unfold(2, 14, 5)).permute(1,2,0,3,4).reshape(16, 3, 14, 14) 
+        #patched_images = (x_tensor.unfold(1, 14, 18).unfold(2, 14, 18)).permute(1,2,0,3,4).reshape(4, 3, 14, 14) 
+        
+        #patched_images = patched_images[1:3]
         
         #print(patched_images.shape)
         #
@@ -171,7 +213,28 @@ class ContrastiveLearningViewGenerator(object):
         #patched_images = torch.from_numpy(patchify(x_tensor.numpy(), (3, 8, 8), step=8))
         #print(patched_images.shape) 
         
-        return [aug_transform(x_patch) for x_patch in patched_images]
+        if self.num_patch>1:
+            #augmented_x = [aug_transform(baseline_transform(x)) for i in range(self.num_patch)]
+            
+            augmented_x = [aug_transform(patch) for patch in patched_images]
+            
+            
+        else:
+        
+            baseline_transform = transforms.Compose([
+                transforms.RandomCrop(14),
+                transforms.ToTensor()]
+            )
+            augmented_x = aug_transform(baseline_transform(x))
+            
+            
+        if add_gaussian:
+            augmented_x.extend([gaussian_transform(x_patch) for x_patch in patched_images])
+        else:
+            
+            pass
+        
+        return augmented_x
         #return [x_patch for x_patch in patched_images]
         
         
