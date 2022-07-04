@@ -297,89 +297,16 @@ def main():
             #Total Loss
             loss = loss_contract + 30*(loss_recon + 0.000125*kl_divergence)
             
-            #loss = loss_recon + 0.00025*kl_divergence
-            #loss = loss_contract 
-            #loss = loss_recon
-            #
             
             x_recon_list = x_recon.chunk(num_patches, dim=0)
             x_recon_list = torch.stack(x_recon_list,dim=0)
             
            
-            
-            
             #Update
             loss.backward()
             opt.step()
             
-            
-            #Update Gaussian Z
-            """
            
-            net.module.decoder.zero_grad()
-            opt_decoder.zero_grad()
-            
-            
-            #print(len(data_list))
-            
-            #print(z_proj_noised.shape)
-            
-            x_recon_noised = net.module.decoder(z_proj_noised)
-            loss = reconstruction_loss(data, x_recon_noised)
-            
-            x_recon_list_Gau = x_recon_noised.chunk(num_patches, dim=0)
-            x_recon_list_Gau = torch.stack(x_recon_list_Gau,dim=0)
-            
-            #Update
-            loss.backward()
-            opt_decoder.step()
-            """
-            
-            
-            
-            """
-            
-            z_proj, x_recon = net(data)
-            
-            data_list = data.chunk(2, dim=0)
-            data, data_withGau = data_list[0], data_list[1]
-            
-            data_list = data.chunk(num_patches, dim=0)
-            data_list = torch.stack(data_list,dim=0)
-            
-            datawithGau_list = data_withGau.chunk(num_patches, dim=0)
-            datawithGau_list = torch.stack(datawithGau_list,dim=0)
-            
-            
-            z = z_proj.chunk(2, dim = 0)
-            z_proj = z[0]
-            
-            #print(z_proj.shape)
-            z_list = z_proj.chunk(num_patches, dim=0)
-            z_avg = chunk_avg(z_proj, num_patches)
-
-            #Contractive Loss
-            loss_contract, _ = contractive_loss(z_list, z_avg)
-            #Reconstruction Loss
-            
-            
-            
-            x_recon_list = x_recon.chunk(2, dim=0)
-            x_recon_noGau = x_recon_list[0]
-            x_recon_Gau = x_recon_list[1]
-            
-            loss_recon = reconstruction_loss(data, x_recon_Gau) + reconstruction_loss(data, x_recon_noGau)
-            #Total Loss
-            loss = loss_contract + loss_recon
-            
-            x_recon_list = x_recon_Gau.chunk(num_patches, dim=0)
-            x_recon_list = torch.stack(x_recon_list,dim=0)
-            
-            x_recon_list_noGau = x_recon_noGau.chunk(num_patches, dim=0)
-            x_recon_list_noGau = torch.stack(x_recon_list_noGau,dim=0)
-            """
-            
-            
 
             
 
